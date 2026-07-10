@@ -1,0 +1,85 @@
+{
+  "if": {
+    "allOf": [
+      {
+        "field": "type",
+        "equals": "Microsoft.AzureArcData/sqlServerInstances"
+      },
+      {
+        "not": {
+          "field": "[concat('tags[', parameters('exclusionTagName'), ']')]",
+          "equals": "[parameters('exclusionTagValue')]"
+        }
+      }
+    ]
+  },
+  "then": {
+    "effect": "[parameters('effect')]",
+    "details": {
+      "type": "Microsoft.AzureArcData/sqlServerInstances",
+      "name": "[field('name')]",
+      "roleDefinitionIds": [
+        "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+      ],
+      "existenceCondition": {
+        "field": "Microsoft.AzureArcData/sqlServerInstances/licenseType",
+        "equals": "[parameters('licenseType')]"
+      },
+      "deployment": {
+        "properties": {
+          "mode": "incremental",
+          "template": {
+            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+              "machineName": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "licenseType": {
+                "type": "string"
+              }
+            },
+            "resources": [
+              {
+                "type": "Microsoft.HybridCompute/machines/extensions",
+                "apiVersion": "2024-07-10",
+                "name": "[concat(parameters('machineName'), '/WindowsAgent.SqlServer')]",
+                "location": "[parameters('location')]",
+                "properties": {
+                  "publisher": "Microsoft.AzureData",
+                  "type": "WindowsAgent.SqlServer",
+                  "settings": {
+                    "LicenseType": "[parameters('licenseType')]",
+                    "SqlManagement": {
+                      "IsEnabled": true
+                    }
+                  }
+                }
+              }
+            ],
+            "outputs": {
+              "policy": {
+                "type": "string",
+                "value": "[concat('Set SQL license type to ', parameters('licenseType'), ' on machine: ', parameters('machineName'))]"
+              }
+            }
+          },
+          "parameters": {
+            "machineName": {
+              "value": "[field('name')]"
+            },
+            "location": {
+              "value": "[field('location')]"
+            },
+            "licenseType": {
+              "value": "[parameters('licenseType')]"
+            }
+          }
+        }
+      }
+    }
+  }
+}

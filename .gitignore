@@ -1,0 +1,19 @@
+# Visual Studio / editors
+.vs/
+.vscode/
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Azure / secrets
+*.azureauth
+*.publishsettings
+local.settings.json
+.env
+
+# PowerShell temp output
+rules.json
+params.json
+*.log

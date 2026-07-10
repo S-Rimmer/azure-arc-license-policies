@@ -1,0 +1,44 @@
+{
+  "effect": {
+    "type": "String",
+    "metadata": {
+      "displayName": "Effect",
+      "description": "DeployIfNotExists, AuditIfNotExists or Disabled the execution of the Policy"
+    },
+    "allowedValues": [
+      "DeployIfNotExists",
+      "AuditIfNotExists",
+      "Disabled"
+    ],
+    "defaultValue": "DeployIfNotExists"
+  },
+  "licenseType": {
+    "type": "String",
+    "metadata": {
+      "displayName": "SQL License Type",
+      "description": "The license type to set on detected Arc-enabled SQL Server instances"
+    },
+    "allowedValues": [
+      "Paid",
+      "PAYG",
+      "LicenseOnly"
+    ],
+    "defaultValue": "Paid"
+  },
+  "exclusionTagName": {
+    "type": "String",
+    "metadata": {
+      "displayName": "Exclusion Tag Name",
+      "description": "Name of a tag on the SQL Server instance resource. Instances carrying this tag with the exclusion value are skipped by the policy (not evaluated or remediated)."
+    },
+    "defaultValue": "ExcludeFromSqlLicensePolicy"
+  },
+  "exclusionTagValue": {
+    "type": "String",
+    "metadata": {
+      "displayName": "Exclusion Tag Value",
+      "description": "Value of the exclusion tag that causes a SQL Server instance to be skipped by the policy."
+    },
+    "defaultValue": "true"
+  }
+}

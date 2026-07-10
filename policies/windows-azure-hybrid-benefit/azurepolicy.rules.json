@@ -1,0 +1,84 @@
+{
+  "if": {
+    "allOf": [
+      {
+        "field": "type",
+        "equals": "Microsoft.HybridCompute/machines"
+      },
+      {
+        "field": "Microsoft.HybridCompute/machines/osType",
+        "equals": "windows"
+      },
+      {
+        "field": "Microsoft.HybridCompute/machines/licenseProfile.licenseStatus",
+        "equals": "Licensed"
+      }
+    ]
+  },
+  "then": {
+    "effect": "[parameters('effect')]",
+    "details": {
+      "type": "Microsoft.HybridCompute/machines",
+      "name": "[field('name')]",
+      "roleDefinitionIds": [
+        "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+      ],
+      "existenceCondition": {
+        "field": "Microsoft.HybridCompute/machines/licenseProfile.softwareAssurance.softwareAssuranceCustomer",
+        "equals": true
+      },
+      "deployment": {
+        "properties": {
+          "mode": "incremental",
+          "template": {
+            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+              "vmName": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "defaultValue": ""
+              }
+            },
+            "resources": [
+              {
+                "condition": "[equals(parameters('status'), 'Connected')]",
+                "name": "[concat(parameters('vmName'), '/default')]",
+                "type": "Microsoft.HybridCompute/machines/licenseProfiles",
+                "location": "[parameters('location')]",
+                "apiVersion": "2025-01-13",
+                "properties": {
+                  "softwareAssurance": {
+                    "softwareAssuranceCustomer": true
+                  }
+                }
+              }
+            ],
+            "outputs": {
+              "policy": {
+                "type": "string",
+                "value": "[concat('Enabled Software Assurance for VM', ': ', parameters('vmName'))]"
+              }
+            }
+          },
+          "parameters": {
+            "vmName": {
+              "value": "[field('name')]"
+            },
+            "location": {
+              "value": "[field('location')]"
+            },
+            "status": {
+              "value": "[field('Microsoft.HybridCompute/machines/status')]"
+            }
+          }
+        }
+      }
+    }
+  }
+}

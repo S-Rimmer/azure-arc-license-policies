@@ -19,6 +19,11 @@
 .PARAMETER Scope
     Optional. Defaults to the subscription. Can be a resource group or MG scope.
 
+.PARAMETER RoleDefinitionId
+    Optional. The built-in role GUID to grant the assignment's managed identity. Should match
+    the roleDefinitionIds in the policy. Defaults to Contributor. For the Windows AHB policy use
+    'cd570a14-e51a-42ad-bac8-bafd67325302' (Azure Connected Machine Resource Administrator).
+
 .EXAMPLE
     ./New-Assignment.ps1 -SubscriptionId "<sub>" -PolicyName "set-arc-sql-license-type" -Location "eastus"
 #>
@@ -28,7 +33,8 @@ param(
     [Parameter(Mandatory = $true)][string]$PolicyName,
     [string]$AssignmentName,
     [Parameter(Mandatory = $true)][string]$Location,
-    [string]$Scope
+    [string]$Scope,
+    [string]$RoleDefinitionId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,16 +53,13 @@ $assignment = New-AzPolicyAssignment `
     -IdentityType SystemAssigned `
     -Location $Location
 
-# The Contributor role id referenced by the policy's roleDefinitionIds
-$contributorRoleId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-
 Write-Host "Waiting for managed identity to propagate..." -ForegroundColor Cyan
 Start-Sleep -Seconds 20
 
-Write-Host "Granting Contributor to the assignment identity..." -ForegroundColor Cyan
+Write-Host "Granting role '$RoleDefinitionId' to the assignment identity..." -ForegroundColor Cyan
 New-AzRoleAssignment `
     -ObjectId $assignment.Identity.PrincipalId `
-    -RoleDefinitionId $contributorRoleId `
+    -RoleDefinitionId $RoleDefinitionId `
     -Scope $Scope | Out-Null
 
 Write-Host "Assignment '$AssignmentName' created and role granted." -ForegroundColor Green

@@ -11,7 +11,7 @@ Enables **Software Assurance / Azure Hybrid Benefit** on licensed Windows Server
 | Scope filter | `osType = windows` **and** `licenseProfile.licenseStatus = Licensed` |
 | Compliance check | `licenseProfile.softwareAssurance.softwareAssuranceCustomer = true` |
 | Remediation | Deploys `machines/licenseProfiles` (`default`) setting `softwareAssurance.softwareAssuranceCustomer = true` (only when the machine `status = Connected`) |
-| Role required | Contributor (`b24988ac-6180-42a0-ab88-20f7382dd24c`) |
+| Role required | Azure Connected Machine Resource Administrator (`cd570a14-e51a-42ad-bac8-bafd67325302`) |
 
 ## Parameters
 

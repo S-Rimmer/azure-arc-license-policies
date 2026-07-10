@@ -1,61 +1,59 @@
-# Set Arc SQL Server License Type
+# Configure Arc-enabled SQL Server License Type
 
-Detects **Azure Arc–enabled SQL Server instances** and sets their license type (default `Paid`) by deploying the **SQL Server extension** with the correct `LicenseType` setting.
+Enforces the SQL Server license type on **Azure Arc–enabled SQL Server** instances by setting the `LicenseType` value on the SQL Server extension (`WindowsAgent.SqlServer` / `LinuxAgent.SqlServer`).
 
-## Key technical point
+## Attribution
 
-`Microsoft.AzureArcData/sqlServerInstances.licenseType` is a **read-only projection**. It cannot be written directly — the authoritative value lives in the **Azure extension for SQL Server** (`WindowsAgent.SqlServer`, publisher `Microsoft.AzureData`) as `settings.LicenseType`.
+> **This policy definition is sourced from Microsoft's official `sql-server-samples` repository and is used here unmodified.**
+>
+> Source: [microsoft/sql-server-samples — arc-sql-license-type-compliance](https://github.com/microsoft/sql-server-samples/tree/master/samples/manage/azure-arc-enabled-sql-server/compliance/arc-sql-license-type-compliance)
+> Licensed by Microsoft under the [MIT License](https://github.com/microsoft/sql-server-samples/blob/master/license.txt).
+>
+> It replaces an earlier custom definition in this repo. The Microsoft version is preferred because it is non-destructive to existing extension settings and handles Pay-as-you-go consent (see below).
 
-Therefore this policy:
-- **Detects** on `sqlServerInstances` (where `licenseType` is readable), and
-- **Remediates** by deploying `Microsoft.HybridCompute/machines/extensions/WindowsAgent.SqlServer` with `settings.LicenseType`.
+## Why this version
 
-Targeting the `sqlServerInstances` resource for remediation does **not** work — the write does not persist.
+Unlike a naive definition that overwrites the extension `settings` object, this policy:
+
+- **Preserves existing extension settings** — the remediation template reads the current settings and does `union(existingSettings, licenseSettings)`, merging only `LicenseType` (and consent). Exclusion lists, patching/ESU config, and other settings are retained.
+- **Registers PAYG consent** — when `targetLicenseType = PAYG`, it sets `ConsentToRecurringPAYG` (Consented + timestamp), which is required for recurring pay-as-you-go billing (e.g., CSP-managed subscriptions).
+- **Targets the extension directly** for both **Windows and Linux** SQL agents.
+- Uses `evaluationDelay: AfterProvisioningSuccess` to account for reporting lag.
+- Uses least-privilege roles (Azure Connected Machine Resource Administrator + Reader).
 
 ## What it does
 
 | Aspect | Value |
 |--------|-------|
-| Detect target | `Microsoft.AzureArcData/sqlServerInstances` |
-| Remediate target | `Microsoft.HybridCompute/machines/extensions` (`WindowsAgent.SqlServer`) |
-| Effect | `DeployIfNotExists` (default), `AuditIfNotExists`, `Disabled` |
-| Compliance check | `sqlServerInstances/licenseType = <licenseType>` |
-| Role required | Contributor (`b24988ac-6180-42a0-ab88-20f7382dd24c`) |
+| Target | `Microsoft.HybridCompute/machines/extensions` where name/type is `*Agent.SqlServer` |
+| Effect | `DeployIfNotExists` (default) or `Disabled` |
+| Compliance check | Extension `settings.LicenseType` equals `targetLicenseType`, subject to `licenseTypesToOverwrite` |
+| Remediation | Deploys the extension with `settings = union(existingSettings, { LicenseType, [ConsentToRecurringPAYG] })` |
+| Roles | Azure Connected Machine Resource Administrator (`7392c568-9289-4bde-aaaa-b7131215889d`), Reader (`acdd72a7-3385-48ef-bd42-f606fba81ae7`) |
 
 ## Parameters
 
-| Name | Allowed values | Default | Notes |
-|------|----------------|---------|-------|
-| `effect` | `DeployIfNotExists`, `AuditIfNotExists`, `Disabled` | `DeployIfNotExists` | Start with `AuditIfNotExists`. |
-| `licenseType` | `Paid`, `PAYG`, `LicenseOnly` | `Paid` | `Paid` = BYOL with SA/subscription; `PAYG` = hourly Azure billing. |
-| `exclusionTagName` | string | `ExcludeFromSqlLicensePolicy` | Tag on the **SQL instance resource** used to opt out. |
-| `exclusionTagValue` | string | `true` | Value that triggers exclusion. |
+| Name | Type | Allowed values | Default | Purpose |
+|------|------|----------------|---------|---------|
+| `effect` | String | `DeployIfNotExists`, `Disabled` | `DeployIfNotExists` | Policy effect |
+| `sqlServerExtensionTypes` | Array | `WindowsAgent.SqlServer`, `LinuxAgent.SqlServer` | both | Which SQL agent extensions to target |
+| `targetLicenseType` | String | `Paid`, `PAYG` | `Paid` | License type to enforce |
+| `licenseTypesToOverwrite` | Array | `Unspecified`, `Paid`, `PAYG`, `LicenseOnly` | all | Which **current** license states are eligible for change. Use this to protect intentionally-set values (e.g., omit `LicenseOnly` to leave Server+CAL instances alone) |
 
-## Caveats (read before enforcing)
+> **Exclusion model:** this policy controls scope via `licenseTypesToOverwrite` (state-based), not via a tag. For example, set it to `["Unspecified"]` to only stamp instances that have no license type yet, leaving all explicitly-set values untouched.
 
-1. **Extension settings are overwritten.** The deployment sends only `LicenseType` and `SqlManagement.IsEnabled = true`. Existing custom settings (exclusion lists, `ConsentToRecurringPAYG`, patching/ESU config) are lost. For machines with custom settings, prefer the [`modify-license-type.ps1`](https://github.com/microsoft/sql-server-samples/tree/master/samples/manage/azure-arc-enabled-sql-server/modify-license-type) script (preserves settings).
-2. **Server+CAL instances must stay `LicenseOnly`** — exclude them via the exclusion tag.
-3. **Projection lag.** After remediation, `sqlServerInstances.licenseType` updates only once the extension reports back (minutes up to ~1 hour). Re-run a compliance scan afterward.
-4. **Assumes** the SQL instance resource name equals the host machine name (true for Arc auto-onboarded SQL) and that the extension resource is named `WindowsAgent.SqlServer`. Verify with:
-   ```powershell
-   az connectedmachine extension list --machine-name "<machine>" -g "<rg>" `
-     --query "[].{name:name, type:properties.type, publisher:properties.publisher, license:properties.settings.LicenseType}" -o table
-   ```
+## Notes for this repo
 
-## Exclude an instance
-
-```powershell
-$sql = Get-AzResource -ResourceType "Microsoft.AzureArcData/sqlServerInstances" -Name "<instance>"
-Update-AzTag -ResourceId $sql.ResourceId -Tag @{ ExcludeFromSqlLicensePolicy = "true" } -Operation Merge
-```
+- The definition is a **faithful copy**; `metadata.category` is left empty as published. Set a category (e.g., `Azure Arc`) at deploy time if your governance requires one.
+- `azurepolicy.rules.json` and `azurepolicy.parameters.json` are generated from the definition for `az CLI` convenience.
 
 ## Deploy
 
 ```powershell
 az policy definition create `
-  --name "set-arc-sql-license-type" `
-  --display-name "Set Arc SQL Server License Type" `
-  --description "Sets SQL license type on Arc-enabled SQL Server instances via the WindowsAgent.SqlServer extension." `
+  --name "configure-arc-sql-license-type" `
+  --display-name "Configure Arc-enabled SQL Server license type" `
+  --description "Configures the license type for Arc-enabled SQL Server extensions to a specified target value." `
   --rules "@azurepolicy.rules.json" `
   --params "@azurepolicy.parameters.json" `
   --mode Indexed
@@ -63,4 +61,4 @@ az policy definition create `
 
 ## Relationship to the other options
 
-This policy is one of three ways to set SQL license type. See [`docs/technical-overview.md`](../../docs/technical-overview.md) for the full comparison and the recommended layered approach (onboarding tag for new servers, `modify-license-type.ps1` for existing/bulk, policy for compliance/drift).
+This is Option A (Azure Policy) in the three-option model. For existing fleets and license-agreement transitions, Microsoft's [`modify-license-type.ps1`](https://github.com/microsoft/sql-server-samples/tree/master/samples/manage/azure-arc-enabled-sql-server/modify-license-type) script is still recommended for bulk changes. See [`docs/technical-overview.md`](../../docs/technical-overview.md).

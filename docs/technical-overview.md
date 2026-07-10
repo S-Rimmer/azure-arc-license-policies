@@ -23,14 +23,14 @@ Both use a system-assigned managed identity with **Contributor** at the assignme
 
 `Microsoft.AzureArcData/sqlServerInstances.licenseType` is a **read-only projection** — it reports the license type but cannot be written directly. The authoritative setting lives in the **Azure extension for SQL Server** (`WindowsAgent.SqlServer`, publisher `Microsoft.AzureData`) as `settings.LicenseType`.
 
-Consequently, the policy **detects** non-compliance on the `sqlServerInstances` resource (where `licenseType` is readable) but **remediates** by deploying the SQL Server extension with `settings.LicenseType = Paid`. A common early mistake is to target the `sqlServerInstances` resource for remediation — that deployment does not persist because the value is owned by the extension.
+Consequently, the policy **detects** and **remediates** on the SQL Server **extension** (`Microsoft.HybridCompute/machines/extensions`, `*Agent.SqlServer`), setting `settings.LicenseType`. A common early mistake is to target the `sqlServerInstances` resource for remediation — that deployment does not persist because the value is owned by the extension. The adopted definition is sourced from Microsoft's [`sql-server-samples`](https://github.com/microsoft/sql-server-samples/tree/master/samples/manage/azure-arc-enabled-sql-server/compliance/arc-sql-license-type-compliance).
 
 ### Operational caveats
 
-- **Extension settings are overwritten** on deployment. Any custom settings (SQL instance exclusion lists, `ConsentToRecurringPAYG`, patching/ESU config) not included in the template are lost. The policy sends only `LicenseType` and `SqlManagement.IsEnabled = true`.
-- **Uniform application:** the policy sets one license type for all in-scope instances. **Server+CAL–licensed instances must remain `LicenseOnly`** and should be excluded via the exclusion tag.
-- An **exclusion tag** parameter (`ExcludeFromSqlLicensePolicy = true` on the SQL instance resource) allows opting individual instances out of evaluation/remediation.
-- After remediation, the `sqlServerInstances.licenseType` projection updates only after the extension reports back (projection lag of minutes up to ~1 hour).
+- **Existing extension settings are preserved.** The adopted Microsoft definition reads the current settings and applies `union(existingSettings, licenseSettings)`, merging only `LicenseType` (and, for PAYG, `ConsentToRecurringPAYG`). Exclusion lists, patching/ESU config, and other settings are retained.
+- **Scope control via `licenseTypesToOverwrite`** (state-based), not a tag: choose which current license states (`Unspecified`/`Paid`/`PAYG`/`LicenseOnly`) are eligible for change. **Server+CAL–licensed instances must remain `LicenseOnly`** and can be protected by omitting `LicenseOnly` from the overwrite list.
+- **PAYG consent** is registered automatically when `targetLicenseType = PAYG` (required for recurring pay-as-you-go, e.g., CSP-managed subscriptions).
+- After remediation, the `sqlServerInstances.licenseType` projection updates only after the extension reports back (projection lag of minutes up to ~1 hour); the policy uses `evaluationDelay: AfterProvisioningSuccess` to accommodate this.
 
 ## The three options for setting SQL license type
 

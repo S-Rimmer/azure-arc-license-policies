@@ -31,9 +31,9 @@ $definitions = @(
         Folder      = 'windows-azure-hybrid-benefit'
     },
     @{
-        Name        = 'set-arc-sql-license-type'
-        DisplayName = 'Set Arc SQL Server License Type'
-        Description = 'Sets SQL license type on Arc-enabled SQL Server instances via the WindowsAgent.SqlServer extension.'
+        Name        = 'configure-arc-sql-license-type'
+        DisplayName = 'Configure Arc-enabled SQL Server license type'
+        Description = 'Configures the license type for Arc-enabled SQL Server extensions to a specified target value.'
         Folder      = 'sql-license-type'
     }
 )

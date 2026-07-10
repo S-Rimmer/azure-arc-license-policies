@@ -5,7 +5,7 @@ Reusable Azure Policy definitions for governing licensing posture across an **Az
 | Policy | Folder | Purpose |
 |--------|--------|---------|
 | **Activate Azure Benefits for Windows Arc Machines** | [`policies/windows-azure-hybrid-benefit`](policies/windows-azure-hybrid-benefit) | Enables Software Assurance / Azure Hybrid Benefit on licensed Windows Server Arc machines (all versions) |
-| **Set Arc SQL License Type** | [`policies/sql-license-type`](policies/sql-license-type) | Sets SQL Server license type (`Paid` / `PAYG` / `LicenseOnly`) via the SQL Server extension |
+| **Configure Arc-enabled SQL Server license type** *(Microsoft-sourced)* | [`policies/sql-license-type`](policies/sql-license-type) | Sets SQL Server license type (`Paid` / `PAYG`) via the SQL Server extension; preserves existing settings and handles PAYG consent |
 
 > Full background, the read-only-projection nuance for SQL `licenseType`, and the recommended layered approach are in [`docs/technical-overview.md`](docs/technical-overview.md).
 

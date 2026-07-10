@@ -3,42 +3,58 @@
     "type": "String",
     "metadata": {
       "displayName": "Effect",
-      "description": "DeployIfNotExists, AuditIfNotExists or Disabled the execution of the Policy"
+      "description": "Enable or disable the execution of the policy."
     },
     "allowedValues": [
       "DeployIfNotExists",
-      "AuditIfNotExists",
       "Disabled"
     ],
     "defaultValue": "DeployIfNotExists"
   },
-  "licenseType": {
-    "type": "String",
+  "sqlServerExtensionTypes": {
+    "type": "Array",
     "metadata": {
-      "displayName": "SQL License Type",
-      "description": "The license type to set on detected Arc-enabled SQL Server instances"
+      "displayName": "SQL Server extension types",
+      "description": "Arc-enabled SQL Server extension names to target."
     },
     "allowedValues": [
+      "WindowsAgent.SqlServer",
+      "LinuxAgent.SqlServer"
+    ],
+    "defaultValue": [
+      "WindowsAgent.SqlServer",
+      "LinuxAgent.SqlServer"
+    ]
+  },
+  "targetLicenseType": {
+    "type": "String",
+    "metadata": {
+      "displayName": "Target license type",
+      "description": "LicenseType value to enforce on the Arc-enabled SQL Server extension settings."
+    },
+    "allowedValues": [
+      "Paid",
+      "PAYG"
+    ],
+    "defaultValue": "Paid"
+  },
+  "licenseTypesToOverwrite": {
+    "type": "Array",
+    "metadata": {
+      "displayName": "Current license types to overwrite",
+      "description": "Select which current LicenseType states are eligible for update. Use 'Unspecified' to include resources where LicenseType is missing."
+    },
+    "allowedValues": [
+      "Unspecified",
       "Paid",
       "PAYG",
       "LicenseOnly"
     ],
-    "defaultValue": "Paid"
-  },
-  "exclusionTagName": {
-    "type": "String",
-    "metadata": {
-      "displayName": "Exclusion Tag Name",
-      "description": "Name of a tag on the SQL Server instance resource. Instances carrying this tag with the exclusion value are skipped by the policy (not evaluated or remediated)."
-    },
-    "defaultValue": "ExcludeFromSqlLicensePolicy"
-  },
-  "exclusionTagValue": {
-    "type": "String",
-    "metadata": {
-      "displayName": "Exclusion Tag Value",
-      "description": "Value of the exclusion tag that causes a SQL Server instance to be skipped by the policy."
-    },
-    "defaultValue": "true"
+    "defaultValue": [
+      "Unspecified",
+      "Paid",
+      "PAYG",
+      "LicenseOnly"
+    ]
   }
 }

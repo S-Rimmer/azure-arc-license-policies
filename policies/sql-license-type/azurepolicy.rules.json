@@ -3,79 +3,226 @@
     "allOf": [
       {
         "field": "type",
-        "equals": "Microsoft.AzureArcData/sqlServerInstances"
+        "equals": "Microsoft.HybridCompute/machines/extensions"
       },
       {
-        "not": {
-          "field": "[concat('tags[', parameters('exclusionTagName'), ']')]",
-          "equals": "[parameters('exclusionTagValue')]"
-        }
+        "anyOf": [
+          {
+            "field": "name",
+            "in": "[parameters('sqlServerExtensionTypes')]"
+          },
+          {
+            "field": "name",
+            "like": "*Agent.SqlServer"
+          }
+        ]
+      },
+      {
+        "field": "Microsoft.HybridCompute/machines/extensions/type",
+        "in": "[parameters('sqlServerExtensionTypes')]"
       }
     ]
   },
   "then": {
     "effect": "[parameters('effect')]",
     "details": {
-      "type": "Microsoft.AzureArcData/sqlServerInstances",
-      "name": "[field('name')]",
+      "type": "Microsoft.HybridCompute/machines/extensions",
       "roleDefinitionIds": [
-        "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        "/providers/Microsoft.Authorization/roleDefinitions/7392c568-9289-4bde-aaaa-b7131215889d",
+        "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
       ],
+      "name": "[field('fullName')]",
       "existenceCondition": {
-        "field": "Microsoft.AzureArcData/sqlServerInstances/licenseType",
-        "equals": "[parameters('licenseType')]"
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "ContainsKey": "LicenseType"
+              },
+              {
+                "value": "[length(intersection(field('Microsoft.HybridCompute/machines/extensions/settings'), createObject('LicenseType', parameters('targetLicenseType'))))]",
+                "equals": 1
+              },
+              {
+                "anyOf": [
+                  {
+                    "value": "[parameters('targetLicenseType')]",
+                    "notEquals": "PAYG"
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "value": "[parameters('targetLicenseType')]",
+                        "equals": "PAYG"
+                      },
+                      {
+                        "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                        "ContainsKey": "ConsentToRecurringPAYG"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "notContainsKey": "LicenseType"
+              },
+              {
+                "value": "[contains(parameters('licenseTypesToOverwrite'), 'Unspecified')]",
+                "equals": false
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "ContainsKey": "LicenseType"
+              },
+              {
+                "value": "[length(intersection(field('Microsoft.HybridCompute/machines/extensions/settings'), createObject('LicenseType', 'Paid')))]",
+                "equals": 1
+              },
+              {
+                "value": "[contains(parameters('licenseTypesToOverwrite'), 'Paid')]",
+                "equals": false
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "ContainsKey": "LicenseType"
+              },
+              {
+                "value": "[length(intersection(field('Microsoft.HybridCompute/machines/extensions/settings'), createObject('LicenseType', 'PAYG')))]",
+                "equals": 1
+              },
+              {
+                "value": "[contains(parameters('licenseTypesToOverwrite'), 'PAYG')]",
+                "equals": false
+              },
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "ContainsKey": "ConsentToRecurringPAYG"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "Microsoft.HybridCompute/machines/extensions/settings",
+                "ContainsKey": "LicenseType"
+              },
+              {
+                "value": "[length(intersection(field('Microsoft.HybridCompute/machines/extensions/settings'), createObject('LicenseType', 'LicenseOnly')))]",
+                "equals": 1
+              },
+              {
+                "value": "[contains(parameters('licenseTypesToOverwrite'), 'LicenseOnly')]",
+                "equals": false
+              }
+            ]
+          }
+        ]
       },
+      "evaluationDelay": "AfterProvisioningSuccess",
       "deployment": {
         "properties": {
           "mode": "incremental",
           "template": {
-            "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+            "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-              "machineName": {
-                "type": "string"
+              "extensionName": {
+                "type": "string",
+                "metadata": {
+                  "description": "The Resource name of the Arc server extension."
+                }
               },
-              "location": {
-                "type": "string"
+              "vmLocation": {
+                "type": "string",
+                "metadata": {
+                  "description": "The location of the Arc server."
+                }
               },
-              "licenseType": {
-                "type": "string"
+              "agentName": {
+                "type": "string",
+                "metadata": {
+                  "description": "Name of the agent, i.e. WindowsAgent.SQLServer."
+                }
+              },
+              "existingSettings": {
+                "type": "object",
+                "metadata": {
+                  "description": "The existing settings on the extension."
+                }
+              },
+              "targetLicenseType": {
+                "type": "string",
+                "metadata": {
+                  "description": "LicenseType value to set on the extension."
+                }
+              },
+              "consentTimestamp": {
+                "type": "string",
+                "defaultValue": "[utcNow('yyyy-MM-ddTHH:mm:ssZ')]",
+                "metadata": {
+                  "description": "UTC timestamp for recurring PAYG consent. Auto-generated at deployment time."
+                }
               }
+            },
+            "functions": [],
+            "variables": {
+              "vmExtensionPublisher": "Microsoft.AzureData",
+              "baseSettings": {
+                "LicenseType": "[parameters('targetLicenseType')]"
+              },
+              "paygConsentSettings": {
+                "LicenseType": "[parameters('targetLicenseType')]",
+                "ConsentToRecurringPAYG": {
+                  "Consented": true,
+                  "ConsentTimestamp": "[parameters('consentTimestamp')]"
+                }
+              },
+              "licenseSettings": "[if(equals(parameters('targetLicenseType'), 'PAYG'), variables('paygConsentSettings'), variables('baseSettings'))]"
             },
             "resources": [
               {
+                "name": "[parameters('extensionName')]",
                 "type": "Microsoft.HybridCompute/machines/extensions",
-                "apiVersion": "2024-07-10",
-                "name": "[concat(parameters('machineName'), '/WindowsAgent.SqlServer')]",
-                "location": "[parameters('location')]",
+                "location": "[parameters('vmLocation')]",
+                "apiVersion": "2022-11-10",
                 "properties": {
-                  "publisher": "Microsoft.AzureData",
-                  "type": "WindowsAgent.SqlServer",
-                  "settings": {
-                    "LicenseType": "[parameters('licenseType')]",
-                    "SqlManagement": {
-                      "IsEnabled": true
-                    }
-                  }
+                  "publisher": "[variables('vmExtensionPublisher')]",
+                  "type": "[parameters('agentName')]",
+                  "settings": "[union(parameters('existingSettings'), variables('licenseSettings'))]"
                 }
               }
             ],
-            "outputs": {
-              "policy": {
-                "type": "string",
-                "value": "[concat('Set SQL license type to ', parameters('licenseType'), ' on machine: ', parameters('machineName'))]"
-              }
-            }
+            "outputs": {}
           },
           "parameters": {
-            "machineName": {
-              "value": "[field('name')]"
+            "extensionName": {
+              "value": "[field('fullName')]"
             },
-            "location": {
+            "vmLocation": {
               "value": "[field('location')]"
             },
-            "licenseType": {
-              "value": "[parameters('licenseType')]"
+            "agentName": {
+              "value": "[field('name')]"
+            },
+            "existingSettings": {
+              "value": "[field('Microsoft.HybridCompute/machines/extensions/settings')]"
+            },
+            "targetLicenseType": {
+              "value": "[parameters('targetLicenseType')]"
             }
           }
         }

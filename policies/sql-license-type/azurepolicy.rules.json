@@ -28,7 +28,7 @@
     "details": {
       "type": "Microsoft.HybridCompute/machines/extensions",
       "roleDefinitionIds": [
-        "/providers/Microsoft.Authorization/roleDefinitions/7392c568-9289-4bde-aaaa-b7131215889d",
+        "/providers/Microsoft.Authorization/roleDefinitions/cd570a14-e51a-42ad-bac8-bafd67325302",
         "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
       ],
       "name": "[field('fullName')]",

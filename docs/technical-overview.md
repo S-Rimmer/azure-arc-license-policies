@@ -9,7 +9,7 @@ Two custom Azure Policy definitions enforce licensing posture on the Azure Arc�
 | 1 | **Activate Azure Benefits for Windows Arc Machines** | `Microsoft.HybridCompute/machines` | DeployIfNotExists | Enables Software Assurance / Azure Hybrid Benefit on licensed Windows Server Arc machines |
 | 2 | **Set Arc SQL Server License Type** | `Microsoft.AzureArcData/sqlServerInstances` (detect) → `Microsoft.HybridCompute/machines/extensions` (remediate) | DeployIfNotExists | Sets SQL Server license type via the SQL Server extension |
 
-Both use a system-assigned managed identity with **Contributor** at the assignment scope and require a **remediation task** to bring existing resources into compliance (DINE only auto-triggers on resource create/update).
+Both use a system-assigned managed identity granted **least-privilege** roles at the assignment scope — **Azure Connected Machine Resource Administrator** (`cd570a14-e51a-42ad-bac8-bafd67325302`) plus **Reader** — and require a **remediation task** to bring existing resources into compliance (DINE only auto-triggers on resource create/update). Roles are only required for the `DeployIfNotExists` effect; `AuditIfNotExists` assignments need no identity or role.
 
 ## Policy 1 — Windows Azure Hybrid Benefit
 

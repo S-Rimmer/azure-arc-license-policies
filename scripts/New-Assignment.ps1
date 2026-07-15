@@ -8,7 +8,7 @@
 
 .PARAMETER PolicyName
     Name of the policy definition to assign (e.g. 'activate-azure-benefits-windows-arc'
-    or 'set-arc-sql-license-type').
+    or 'configure-arc-sql-license-type').
 
 .PARAMETER AssignmentName
     Optional assignment name. Defaults to the policy name.
@@ -19,13 +19,15 @@
 .PARAMETER Scope
     Optional. Defaults to the subscription. Can be a resource group or MG scope.
 
-.PARAMETER RoleDefinitionId
-    Optional. The built-in role GUID to grant the assignment's managed identity. Should match
-    the roleDefinitionIds in the policy. Defaults to Contributor. For the Windows AHB policy use
-    'cd570a14-e51a-42ad-bac8-bafd67325302' (Azure Connected Machine Resource Administrator).
+.PARAMETER RoleDefinitionIds
+    Optional. One or more built-in role GUIDs to grant the assignment's managed identity. These
+    must cover the roleDefinitionIds in the policy definition. Defaults to the least-privilege roles
+    used by the Arc license policies: Azure Connected Machine Resource Administrator
+    ('cd570a14-e51a-42ad-bac8-bafd67325302') and Reader ('acdd72a7-3385-48ef-bd42-f606fba81ae7').
+    Roles are only needed when assigning a DeployIfNotExists effect; AuditIfNotExists needs none.
 
 .EXAMPLE
-    ./New-Assignment.ps1 -SubscriptionId "<sub>" -PolicyName "set-arc-sql-license-type" -Location "eastus"
+    ./New-Assignment.ps1 -SubscriptionId "<sub>" -PolicyName "configure-arc-sql-license-type" -Location "eastus"
 #>
 [CmdletBinding()]
 param(
@@ -34,7 +36,7 @@ param(
     [string]$AssignmentName,
     [Parameter(Mandatory = $true)][string]$Location,
     [string]$Scope,
-    [string]$RoleDefinitionId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    [string[]]$RoleDefinitionIds = @('cd570a14-e51a-42ad-bac8-bafd67325302', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,10 +58,12 @@ $assignment = New-AzPolicyAssignment `
 Write-Host "Waiting for managed identity to propagate..." -ForegroundColor Cyan
 Start-Sleep -Seconds 20
 
-Write-Host "Granting role '$RoleDefinitionId' to the assignment identity..." -ForegroundColor Cyan
-New-AzRoleAssignment `
-    -ObjectId $assignment.Identity.PrincipalId `
-    -RoleDefinitionId $RoleDefinitionId `
-    -Scope $Scope | Out-Null
+foreach ($roleId in $RoleDefinitionIds) {
+    Write-Host "Granting role '$roleId' to the assignment identity..." -ForegroundColor Cyan
+    New-AzRoleAssignment `
+        -ObjectId $assignment.Identity.PrincipalId `
+        -RoleDefinitionId $roleId `
+        -Scope $Scope | Out-Null
+}
 
-Write-Host "Assignment '$AssignmentName' created and role granted." -ForegroundColor Green
+Write-Host "Assignment '$AssignmentName' created and role(s) granted." -ForegroundColor Green

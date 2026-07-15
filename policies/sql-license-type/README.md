@@ -4,7 +4,7 @@ Enforces the SQL Server license type on **Azure Arc–enabled SQL Server** insta
 
 ## Attribution
 
-> **This policy definition is sourced from Microsoft's official `sql-server-samples` repository and is used here unmodified.**
+> **This policy definition is sourced from Microsoft's official `sql-server-samples` repository, with minor local modifications (see "Notes for this repo").**
 >
 > Source: [microsoft/sql-server-samples — arc-sql-license-type-compliance](https://github.com/microsoft/sql-server-samples/tree/master/samples/manage/azure-arc-enabled-sql-server/compliance/arc-sql-license-type-compliance)
 > Licensed by Microsoft under the [MIT License](https://github.com/microsoft/sql-server-samples/blob/master/license.txt).
@@ -26,16 +26,16 @@ Unlike a naive definition that overwrites the extension `settings` object, this 
 | Aspect | Value |
 |--------|-------|
 | Target | `Microsoft.HybridCompute/machines/extensions` where name/type is `*Agent.SqlServer` |
-| Effect | `DeployIfNotExists` (default) or `Disabled` |
+| Effect | `DeployIfNotExists` (default), `AuditIfNotExists`, or `Disabled` |
 | Compliance check | Extension `settings.LicenseType` equals `targetLicenseType`, subject to `licenseTypesToOverwrite` |
 | Remediation | Deploys the extension with `settings = union(existingSettings, { LicenseType, [ConsentToRecurringPAYG] })` |
-| Roles | Azure Connected Machine Resource Administrator (`7392c568-9289-4bde-aaaa-b7131215889d`), Reader (`acdd72a7-3385-48ef-bd42-f606fba81ae7`) |
+| Roles | Azure Connected Machine Resource Administrator (`cd570a14-e51a-42ad-bac8-bafd67325302`), Reader (`acdd72a7-3385-48ef-bd42-f606fba81ae7`) |
 
 ## Parameters
 
 | Name | Type | Allowed values | Default | Purpose |
 |------|------|----------------|---------|---------|
-| `effect` | String | `DeployIfNotExists`, `Disabled` | `DeployIfNotExists` | Policy effect |
+| `effect` | String | `DeployIfNotExists`, `AuditIfNotExists`, `Disabled` | `DeployIfNotExists` | Policy effect |
 | `sqlServerExtensionTypes` | Array | `WindowsAgent.SqlServer`, `LinuxAgent.SqlServer` | both | Which SQL agent extensions to target |
 | `targetLicenseType` | String | `Paid`, `PAYG` | `Paid` | License type to enforce |
 | `licenseTypesToOverwrite` | Array | `Unspecified`, `Paid`, `PAYG`, `LicenseOnly` | all | Which **current** license states are eligible for change. Use this to protect intentionally-set values (e.g., omit `LicenseOnly` to leave Server+CAL instances alone) |
@@ -44,7 +44,7 @@ Unlike a naive definition that overwrites the extension `settings` object, this 
 
 ## Notes for this repo
 
-- The definition is a **faithful copy**; `metadata.category` is left empty as published. Set a category (e.g., `Azure Arc`) at deploy time if your governance requires one.
+- Two local changes were made to Microsoft's sample: `AuditIfNotExists` was added to the `effect` allowed values (so the estate can be audited before enforcing), and the Azure Connected Machine Resource Administrator role ID was corrected to `cd570a14-e51a-42ad-bac8-bafd67325302`. `metadata.category` is left empty as published; set a category (e.g., `Azure Arc`) at deploy time if your governance requires one.
 - `azurepolicy.rules.json` and `azurepolicy.parameters.json` are generated from the definition for `az CLI` convenience.
 
 ## Deploy

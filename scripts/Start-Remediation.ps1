@@ -12,7 +12,7 @@
     Optional. Defaults to the subscription. Use a resource group scope to narrow remediation.
 
 .EXAMPLE
-    ./Start-Remediation.ps1 -SubscriptionId "<sub>" -AssignmentName "set-arc-sql-license-type"
+    ./Start-Remediation.ps1 -SubscriptionId "<sub>" -AssignmentName "configure-arc-sql-license-type"
 #>
 [CmdletBinding()]
 param(

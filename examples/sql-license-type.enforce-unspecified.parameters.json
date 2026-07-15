@@ -1,0 +1,13 @@
+{
+  "effect": {
+    "value": "DeployIfNotExists"
+  },
+  "targetLicenseType": {
+    "value": "Paid"
+  },
+  "licenseTypesToOverwrite": {
+    "value": [
+      "Unspecified"
+    ]
+  }
+}

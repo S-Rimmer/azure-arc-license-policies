@@ -1,0 +1,13 @@
+{
+  "effect": {
+    "value": "AuditIfNotExists"
+  },
+  "targetLicenseType": {
+    "value": "Paid"
+  },
+  "licenseTypesToOverwrite": {
+    "value": [
+      "Unspecified"
+    ]
+  }
+}

@@ -19,7 +19,7 @@ Unlike a naive definition that overwrites the extension `settings` object, this 
 - **Registers PAYG consent** — when `targetLicenseType = PAYG`, it sets `ConsentToRecurringPAYG` (Consented + timestamp), which is required for recurring pay-as-you-go billing (e.g., CSP-managed subscriptions).
 - **Targets the extension directly** for both **Windows and Linux** SQL agents.
 - Uses `evaluationDelay: AfterProvisioningSuccess` to account for reporting lag.
-- Uses least-privilege roles (Azure Connected Machine Resource Administrator + Reader).
+- Uses a least-privilege role (Azure Extension for SQL Server Deployment) — the same purpose-built role Microsoft's built-in SQL license policy uses.
 
 ## What it does
 
@@ -29,7 +29,7 @@ Unlike a naive definition that overwrites the extension `settings` object, this 
 | Effect | `DeployIfNotExists` (default), `AuditIfNotExists`, or `Disabled` |
 | Compliance check | Extension `settings.LicenseType` equals `targetLicenseType`, subject to `licenseTypesToOverwrite` |
 | Remediation | Deploys the extension with `settings = union(existingSettings, { LicenseType, [ConsentToRecurringPAYG] })` |
-| Roles | Azure Connected Machine Resource Administrator (`cd570a14-e51a-42ad-bac8-bafd67325302`), Reader (`acdd72a7-3385-48ef-bd42-f606fba81ae7`) |
+| Roles | Azure Extension for SQL Server Deployment (`7392c568-9289-4bde-aaaa-b7131215889d`) |
 
 ## Parameters
 
@@ -44,7 +44,7 @@ Unlike a naive definition that overwrites the extension `settings` object, this 
 
 ## Notes for this repo
 
-- Two local changes were made to Microsoft's sample: `AuditIfNotExists` was added to the `effect` allowed values (so the estate can be audited before enforcing), and the Azure Connected Machine Resource Administrator role ID was corrected to `cd570a14-e51a-42ad-bac8-bafd67325302`. `metadata.category` is left empty as published; set a category (e.g., `Azure Arc`) at deploy time if your governance requires one.
+- Two local changes were made to Microsoft's sample: `AuditIfNotExists` was added to the `effect` allowed values (so the estate can be audited before enforcing), and remediation uses the purpose-built, least-privilege **Azure Extension for SQL Server Deployment** role (`7392c568-9289-4bde-aaaa-b7131215889d`) — the same role Microsoft's built-in SQL license policy uses. `metadata.category` is left empty as published; set a category (e.g., `Azure Arc`) at deploy time if your governance requires one.
 - `azurepolicy.rules.json` and `azurepolicy.parameters.json` are generated from the definition for `az CLI` convenience.
 
 ## Deploy

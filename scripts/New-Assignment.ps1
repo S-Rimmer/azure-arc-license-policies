@@ -21,9 +21,11 @@
 
 .PARAMETER RoleDefinitionIds
     Optional. One or more built-in role GUIDs to grant the assignment's managed identity. These
-    must cover the roleDefinitionIds in the policy definition. Defaults to the least-privilege roles
-    used by the Arc license policies: Azure Connected Machine Resource Administrator
-    ('cd570a14-e51a-42ad-bac8-bafd67325302') and Reader ('acdd72a7-3385-48ef-bd42-f606fba81ae7').
+    must cover the roleDefinitionIds in the policy definition. When omitted, the script grants
+    exactly the roleDefinitionIds declared by the policy definition being assigned (least-privilege):
+    the SQL license policy uses 'Azure Extension for SQL Server Deployment'
+    ('7392c568-9289-4bde-aaaa-b7131215889d') and the Windows AHB policy uses
+    'Azure Connected Machine Resource Administrator' ('cd570a14-e51a-42ad-bac8-bafd67325302').
     Roles are only needed when assigning a DeployIfNotExists effect; AuditIfNotExists needs none.
 
 .PARAMETER PolicyParameterFile
@@ -53,7 +55,7 @@ param(
     [string]$AssignmentName,
     [Parameter(Mandatory = $true)][string]$Location,
     [string]$Scope,
-    [string[]]$RoleDefinitionIds = @('cd570a14-e51a-42ad-bac8-bafd67325302', 'acdd72a7-3385-48ef-bd42-f606fba81ae7'),
+    [string[]]$RoleDefinitionIds,
     [string]$PolicyParameterFile,
     [switch]$SkipRoleAssignment
 )
@@ -65,6 +67,20 @@ if (-not $AssignmentName) { $AssignmentName = $PolicyName }
 if (-not $Scope) { $Scope = "/subscriptions/$SubscriptionId" }
 
 $definition = Get-AzPolicyDefinition -Name $PolicyName
+
+# When roles aren't supplied, grant exactly the roleDefinitionIds declared by the policy
+# definition being assigned. This keeps each policy least-privilege (e.g. the SQL policy uses
+# the 'Azure Extension for SQL Server Deployment' role; the Windows AHB policy uses
+# 'Azure Connected Machine Resource Administrator').
+if (-not $SkipRoleAssignment -and (-not $RoleDefinitionIds -or $RoleDefinitionIds.Count -eq 0)) {
+    $policyRule = $definition.PolicyRule
+    if (-not $policyRule) { $policyRule = $definition.Properties.PolicyRule }
+    $declaredRoleIds = @($policyRule.then.details.roleDefinitionIds)
+    if (-not $declaredRoleIds -or $declaredRoleIds.Count -eq 0) {
+        throw "Could not read roleDefinitionIds from policy definition '$PolicyName'. Pass -RoleDefinitionIds explicitly."
+    }
+    $RoleDefinitionIds = $declaredRoleIds | ForEach-Object { ($_ -split '/')[-1] }
+}
 
 $assignmentArgs = @{
     Name             = $AssignmentName
